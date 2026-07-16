@@ -18,21 +18,22 @@ gym_map = {
     'TSQ': 'trolley square'
 }
 
-# Replace your hardcoded MoLoc with a dropdown
 mo_loc = st.sidebar.selectbox("Select Current Location (MoLoc):", list(gym_map.keys()))
 
-# --- File Uploaders ---
-st.subheader("1. Upload Source Files")
+# --- Separate File Uploaders ---
+st.subheader("1. Upload Raw Reports")
 col1, col2 = st.columns(2)
 
 with col1:
-    checkin_file = st.file_uploader("Upload Remote Check-in Percentage Report (.csv)", type=["csv"])
+    # You can drop ANY csv file here; its name doesn't matter
+    checkin_file = st.file_uploader("Upload Remote Check-in Percentage Report", type=["csv"])
 with col2:
-    info_file = st.file_uploader("Upload Print Displayed Customer List (.csv)", type=["csv"])
+    # You can drop ANY csv file here; its name doesn't matter
+    info_file = st.file_uploader("Upload Print Displayed Customer List", type=["csv"])
 
 # --- Processing Logic ---
 if checkin_file and info_file:
-    st.success("Both files uploaded successfully! Processing...")
+    st.success("Both files received! Processing data...")
     
     try:
         # Read the uploaded files directly from the browser cache
@@ -42,7 +43,7 @@ if checkin_file and info_file:
         # --- Your Pandas Clean up & Filtering Logic ---
         checkin = checkin.rename(columns=str.lower)
         
-        # Clean remote percentage (handling strings/percentages safely)
+        # Clean remote percentage safely
         checkin['remote percentage'] = checkin['remote percentage'].astype(str).str.replace('%', '')
         checkin['remote percentage'] = pd.to_numeric(checkin['remote percentage']).round(2)
 
@@ -97,7 +98,6 @@ if checkin_file and info_file:
         st.metric(label="Total Members to Transfer", value=len(output))
 
         # --- Download Button ---
-        # Convert dataframe to CSV bytes for browser download
         csv_data = output.to_csv(index=False).encode('utf-8')
         output_file_name = f"{mo_loc}_{date.today().strftime('%Y.%m')}_ToBeTransferred.csv"
 
