@@ -4,7 +4,7 @@ from datetime import date
 
 # --- App Title & Config ---
 st.set_page_config(page_title="Gym Member Transfer Tool", layout="wide")
-st.title("🏋️‍♂️ Gym Member Transfer Tool")
+st.title("🏋️‍♂️️ Gym Member Transfer Tool")
 st.write(f"Report Period: **{date.today().strftime('%Y.%m')}**")
 
 # --- Sidebar Inputs ---
@@ -18,7 +18,7 @@ regions = {
         'SDY': 'sandy',
         'FTU': 'fort union',
         'TSQ': 'trolley square',
-        'MCA': 'academy'
+        'MCA': 'climbing academy'
     },
     "Texas": {
         'KTY': 'katy',
@@ -75,26 +75,35 @@ if checkin_file and info_file:
         checkin_info['% Remote'] = ((checkin_info['remote visits'] / checkin_info['total visits']) * 100).round(0)
 
         # --- Regional Transfer Calculations ---
-        # Only compare against gyms within the selected region
         current_gym = gym_map[mo_loc]
-        comparison_gyms = [g for g in gym_map.values() if g != current_gym]
-
-        checkin_info[comparison_gyms] = checkin_info[comparison_gyms].astype(float).fillna(0)
-        max_vals = checkin_info[comparison_gyms].max(axis=1)
-        ties = checkin_info[comparison_gyms].eq(max_vals, axis=0).sum(axis=1) > 1
-
-        checkin_info['transfer location'] = checkin_info[comparison_gyms].idxmax(axis=1)
-        checkin_info.loc[ties, 'transfer location'] = 'Investigate'
-
-        resp_party = checkin_info['responsible party']
-        has_resp_party = resp_party.notnull()
-        resp_party_trans = resp_party.isin(checkin_info['name'])
         
-        output = checkin_info[has_resp_party == resp_party_trans]
+        # Candidate gyms to compare against
+        target_gyms = [g for g in gym_map.values() if g != current_gym]
+        
+        # SAFE FILTER: Only keep gym columns that actually exist in the CSV headers
+        existing_columns = [col.lower() for col in checkin_info.columns]
+        comparison_gyms = [g for g in target_gyms if g in existing_columns]
 
-        cols = output.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        output = output[cols]
+        if not comparison_gyms:
+            st.warning("⚠️ None of the comparison gym columns were found in this report. Showing raw matched records instead.")
+            output = checkin_info
+        else:
+            checkin_info[comparison_gyms] = checkin_info[comparison_gyms].astype(float).fillna(0)
+            max_vals = checkin_info[comparison_gyms].max(axis=1)
+            ties = checkin_info[comparison_gyms].eq(max_vals, axis=0).sum(axis=1) > 1
+
+            checkin_info['transfer location'] = checkin_info[comparison_gyms].idxmax(axis=1)
+            checkin_info.loc[ties, 'transfer location'] = 'Investigate'
+
+            resp_party = checkin_info['responsible party']
+            has_resp_party = resp_party.notnull()
+            resp_party_trans = resp_party.isin(checkin_info['name'])
+            
+            output = checkin_info[has_resp_party == resp_party_trans]
+
+            cols = output.columns.tolist()
+            cols = cols[-1:] + cols[:-1]
+            output = output[cols]
 
         st.subheader("2. Output Preview")
         st.dataframe(output)
